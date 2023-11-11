@@ -1,12 +1,15 @@
-'''Random Retriever'''
+"""Random Retriever"""
 
-from openicl import DatasetReader
-from openicl.icl_retriever import BaseRetriever
-from openicl.utils.logging import get_logger
-from typing import List, Union, Optional
-from tqdm import trange
+from typing import Optional
+
 import numpy as np
 from accelerate import Accelerator
+from tqdm import trange
+
+from openicl import DatasetReader
+from openicl.utils.logging import get_logger
+
+from .icl_base_retriever import BaseRetriever
 
 logger = get_logger(__name__)
 
@@ -14,7 +17,7 @@ logger = get_logger(__name__)
 class RandomRetriever(BaseRetriever):
     """Random In-context Learning Retriever Class
         Class of Random Retriever.
-        
+
     Attributes:
         dataset_reader (:obj:`DatasetReader`): An instance of the :obj:`DatasetReader` class.
         ice_separator (:obj:`str`, optional): A string that separates each in-context example.
@@ -29,19 +32,28 @@ class RandomRetriever(BaseRetriever):
         seed (`int`, optional): Seed for the random number generator.
     """
 
-    def __init__(self,
-                 dataset_reader: DatasetReader,
-                 ice_separator: Optional[str] = '\n',
-                 ice_eos_token: Optional[str] = '\n',
-                 prompt_eos_token: Optional[str] = '',
-                 ice_num: Optional[int] = 1,
-                 index_split: Optional[str] = 'train',
-                 test_split: Optional[str] = 'test',
-                 seed: Optional[int] = 43,
-                 accelerator: Optional[Accelerator] = None
-                 ) -> None:
-        super().__init__(dataset_reader, ice_separator, ice_eos_token, prompt_eos_token, ice_num, index_split,
-                         test_split, accelerator)
+    def __init__(
+        self,
+        dataset_reader: DatasetReader,
+        ice_separator: Optional[str] = "\n",
+        ice_eos_token: Optional[str] = "\n",
+        prompt_eos_token: Optional[str] = "",
+        ice_num: Optional[int] = 1,
+        index_split: Optional[str] = "train",
+        test_split: Optional[str] = "test",
+        seed: Optional[int] = 43,
+        accelerator: Optional[Accelerator] = None,
+    ) -> None:
+        super().__init__(
+            dataset_reader,
+            ice_separator,
+            ice_eos_token,
+            prompt_eos_token,
+            ice_num,
+            index_split,
+            test_split,
+            accelerator,
+        )
         self.seed = seed
 
     def retrieve(self):

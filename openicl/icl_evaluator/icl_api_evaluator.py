@@ -1,16 +1,17 @@
 """API evaluator"""
-from openicl.icl_evaluator import BaseEvaluator
-from typing import List, Dict
-import evaluate
+
+from . import BaseEvaluator
 
 
 class APIEvaluator(BaseEvaluator):
     def __init__(self, metric) -> None:
         super().__init__()
-        self.metric = metric
+
+        import evaluate
+
+        self.metric = evaluate.load(metric)
 
     def score(self, predictions, references):
         assert len(predictions) == len(references)
-        metric = evaluate.load(metric)
-        scores = metric.compute(predictions=predictions, references=references)
+        scores = self.metric.compute(predictions=predictions, references=references)
         return scores

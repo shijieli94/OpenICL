@@ -4,10 +4,10 @@ import torch.distributed as dist
 
 LOG_LEVEL = logging.INFO
 SUBPROCESS_LOG_LEVEL = logging.ERROR
-LOG_FORMATTER = '[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s'
+LOG_FORMATTER = "[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s"
 
 
-def get_logger(name, level=LOG_LEVEL, log_file=None, file_mode='w'):
+def get_logger(name, level=LOG_LEVEL, log_file=None, file_mode="w"):
     formatter = logging.Formatter(LOG_FORMATTER)
 
     logger = logging.getLogger(name)

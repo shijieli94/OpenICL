@@ -1,21 +1,24 @@
 """Votek Retriever"""
 
-import os
 import json
-from openicl import DatasetReader
-from openicl.icl_retriever.icl_topk_retriever import TopkRetriever
-from typing import List, Union, Optional, Tuple
-from sklearn.metrics.pairwise import cosine_similarity
-from collections import defaultdict
-import numpy as np
+import os
 import random
+from collections import defaultdict
+from typing import Optional
+
+import numpy as np
 from accelerate import Accelerator
+from sklearn.metrics.pairwise import cosine_similarity
+
+from openicl import DatasetReader
+
+from .icl_topk_retriever import TopkRetriever
 
 
 class VotekRetriever(TopkRetriever):
     """Vote-k In-context Learning Retriever Class
         Class of Vote-k Retriever.
-        
+
     Attributes:
         dataset_reader (:obj:`DatasetReader`): An instance of the :obj:`DatasetReader` class.
         ice_separator (:obj:`str`, optional): A string that separates each in-context example.
@@ -27,30 +30,41 @@ class VotekRetriever(TopkRetriever):
         index_ds (:obj:`Dataset`): The index dataset. Used to select data for in-context examples.
         test_ds (:obj:`Dataset`): The test dataset. Used to generate prompts for each data.
         accelerator (:obj:`Accelerator`, optional): An instance of the :obj:`Accelerator` class, used for multiprocessing.
-        batch_size (:obj:`int`, optional): Batch size for the :obj:`DataLoader`. 
+        batch_size (:obj:`int`, optional): Batch size for the :obj:`DataLoader`.
         model (:obj:`SentenceTransformer`): An instance of :obj:`SentenceTransformer` class, used to calculate embeddings.
         tokenizer (:obj:`AutoTokenizer`): Tokenizer for :obj:``model``.
         index (:obj:`IndexIDMap`): Index generated with FAISS.
         votek_k (:obj:`int`, optional): ``k`` value of Voke-k Selective Annotation Algorithm. Defaults to ``3``.
     """
 
-    def __init__(self,
-                 dataset_reader: DatasetReader,
-                 ice_separator: Optional[str] = '\n',
-                 ice_eos_token: Optional[str] = '\n',
-                 prompt_eos_token: Optional[str] = '',
-                 sentence_transformers_model_name: Optional[str] = 'all-mpnet-base-v2',
-                 ice_num: Optional[int] = 1,
-                 index_split: Optional[str] = 'train',
-                 test_split: Optional[str] = 'test',
-                 tokenizer_name: Optional[str] = 'gpt2-xl',
-                 batch_size: Optional[int] = 1,
-                 votek_k: Optional[int] = 3,
-                 accelerator: Optional[Accelerator] = None,
-                 ) -> None:
-        super().__init__(dataset_reader, ice_separator, ice_eos_token, prompt_eos_token,
-                         sentence_transformers_model_name, ice_num, index_split, test_split, tokenizer_name, batch_size,
-                         accelerator)
+    def __init__(
+        self,
+        dataset_reader: DatasetReader,
+        ice_separator: Optional[str] = "\n",
+        ice_eos_token: Optional[str] = "\n",
+        prompt_eos_token: Optional[str] = "",
+        sentence_transformers_model_name: Optional[str] = "all-mpnet-base-v2",
+        ice_num: Optional[int] = 1,
+        index_split: Optional[str] = "train",
+        test_split: Optional[str] = "test",
+        tokenizer_name: Optional[str] = "gpt2-xl",
+        batch_size: Optional[int] = 1,
+        votek_k: Optional[int] = 3,
+        accelerator: Optional[Accelerator] = None,
+    ) -> None:
+        super().__init__(
+            dataset_reader,
+            ice_separator,
+            ice_eos_token,
+            prompt_eos_token,
+            sentence_transformers_model_name,
+            ice_num,
+            index_split,
+            test_split,
+            tokenizer_name,
+            batch_size,
+            accelerator,
+        )
         self.votek_k = votek_k
 
     def votek_select(self, embeddings=None, select_num=None, k=None, overlap_threshold=None, vote_file=None):
@@ -64,13 +78,13 @@ class VotekRetriever(TopkRetriever):
             for i in range(n):
                 cur_emb = embeddings[i].reshape(1, -1)
                 cur_scores = np.sum(cosine_similarity(embeddings, cur_emb), axis=1)
-                sorted_indices = np.argsort(cur_scores).tolist()[-k - 1:-1]
+                sorted_indices = np.argsort(cur_scores).tolist()[-k - 1 : -1]
                 for idx in sorted_indices:
                     if idx != i:
                         vote_stat[idx].append(i)
 
             if vote_file is not None:
-                with open(vote_file, 'w') as f:
+                with open(vote_file, "w") as f:
                     json.dump(vote_stat, f)
         votes = sorted(vote_stat.items(), key=lambda x: len(x[1]), reverse=True)
         j = 0
@@ -98,8 +112,9 @@ class VotekRetriever(TopkRetriever):
         return selected_indices
 
     def vote_k_search(self):
-        vote_k_idxs = self.votek_select(embeddings=self.embed_list, select_num=self.ice_num, k=self.votek_k,
-                                        overlap_threshold=1)
+        vote_k_idxs = self.votek_select(
+            embeddings=self.embed_list, select_num=self.ice_num, k=self.votek_k, overlap_threshold=1
+        )
         return [vote_k_idxs[:] for _ in range(len(self.test_ds))]
 
     def retrieve(self):

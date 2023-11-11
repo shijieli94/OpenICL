@@ -1,63 +1,74 @@
-from os.path import dirname as d
+import sys
 from os.path import abspath
-import sys 
+from os.path import dirname as d
+
 root = d(d(abspath(__file__)))
 sys.path.append(root)
-from collections import Counter
-
 import json
-from openicl import DatasetReader, ZeroRetriever, PromptTemplate, TopkRetriever, GenInferencer, AccEvaluator
+
 # import fire
 import re
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from collections import Counter
+
 from datasets import load_dataset
-#from train_llm.test.proxy import proxy_on
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+from openicl import (
+    AccEvaluator,
+    DatasetReader,
+    GenInferencer,
+    PromptTemplate,
+    TopkRetriever,
+    ZeroRetriever,
+)
+
+# from train_llm.test.proxy import proxy_on
 
 
 def processing_answer(str):
-        str = str.split(' ')[::-1]
-        flag = False
-        ret = ''
-        for i in range(len(str)):
-            s = str[i]
-            for i in range(len(s)):
-                if s[i].isdigit():
-                    flag = True
-                    ret = s
-                    break
-            if flag:
+    str = str.split(" ")[::-1]
+    flag = False
+    ret = ""
+    for i in range(len(str)):
+        s = str[i]
+        for i in range(len(s)):
+            if s[i].isdigit():
+                flag = True
+                ret = s
                 break
-        ret1 = ''
-        for i in range(len(ret)):
-            if ret[i].isdigit():
-                ret1 += ret[i]
-        return ret1
+        if flag:
+            break
+    ret1 = ""
+    for i in range(len(ret)):
+        if ret[i].isdigit():
+            ret1 += ret[i]
+    return ret1
 
 
 def main(model_path, ice_num=4, batch_size=1, max_seq_len=2048, sc_size=5):
-    
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     model = AutoModelForCausalLM.from_pretrained(model_path)
 
-    ds = load_dataset('gsm8k', 'main', split="test[:100]")
+    ds = load_dataset("gsm8k", "main", split="test[:100]")
     print(ds)
+
     # import pdb;pdb.set_trace()
     def processing_test(example):
-        example['answer'] = example['answer'].split("#### ")[1].replace(',', '')
+        example["answer"] = example["answer"].split("#### ")[1].replace(",", "")
         return example
-    
-    data = DatasetReader(ds, input_columns=['question'], output_column='answer')
+
+    data = DatasetReader(ds, input_columns=["question"], output_column="answer")
 
     ref = ds.map(processing_test)
-    
-    #template = PromptTemplate("</E>Q: There are 15 trees in the grove. Grove workers will plant trees in the grove today. After they are done, there will be 21 trees. How many trees did the grove workers plant today?\nA: We start with 15 trees. Later we have 21 trees. The difference must be the number of trees they planted. So, they must have planted 21 - 15 = 6 trees. The answer is 6.\n\nQ: If there are 3 cars in the parking lot and 2 more cars arrive, how many cars are in the parking lot?\nA: There are 3 cars in the parking lot already. 2 more arrive. Now there are 3 + 2 = 5 cars. The answer is 5.\n\nQ: Leah had 32 chocolates and her sister had 42. If they ate 35, how many pieces do they have left in total?\nA: Leah had 32 chocolates and Leah's sister had 42. That means there were originally 32 + 42 = 74 chocolates. 35 have been eaten. So in total they still have 74 - 35 = 39 chocolates. The answer is 39.\n\nQ: Jason had 20 lollipops. He gave Denny some lollipops. Now Jason has 12 lollipops. How many lollipops did Jason give to Denny?\nA: Jason had 20 lollipops. Since he only has 12 now, he must have given the rest to Denny. The number of lollipops he has given to Denny must have been 20 - 12 = 8 lollipops. The answer is 8.\n\nQ: Shawn has five toys. For Christmas, he got two toys each from his mom and dad. How many toys does he have now?\nA: He has 5 toys. He got 2 from mom, so after that he has 5 + 2 = 7 toys. Then he got 2 more from dad, so in total he has 7 + 2 = 9 toys. The answer is 9.\n\nQ: There were nine computers in the server room. Five more computers were installed each day, from monday to thursday. How many computers are now in the server room?\nA: There are 4 days from monday to thursday. 5 computers were added each day. That means in total 4 * 5 = 20 computers were added. There were 9 computers in the beginning, so now there are 9 + 20 = 29 computers. The answer is 29.\n\nQ: Michael had 58 golf balls. On tuesday, he lost 23 golf balls. On wednesday, he lost 2 more. How many golf balls did he have at the end of wednesday?\nA: Michael initially had 58 balls. He lost 23 on Tuesday, so after that he has 58 - 23 = 35 balls. On Wednesday he lost 2 more so now he has 35 - 2 = 33 balls. The answer is 33.\n\nQ: Olivia has $23. She bought five bagels for $3 each. How much money does she have left?\nA: She bought 5 bagels for $3 each. This means she spent 5 * $3 = $15 on the bagels. She had $23 in beginning, so now she has $23 - $15 = $8. The answer is 8.\n\nQ: </Q>\nA: </A>",
+
+    # template = PromptTemplate("</E>Q: There are 15 trees in the grove. Grove workers will plant trees in the grove today. After they are done, there will be 21 trees. How many trees did the grove workers plant today?\nA: We start with 15 trees. Later we have 21 trees. The difference must be the number of trees they planted. So, they must have planted 21 - 15 = 6 trees. The answer is 6.\n\nQ: If there are 3 cars in the parking lot and 2 more cars arrive, how many cars are in the parking lot?\nA: There are 3 cars in the parking lot already. 2 more arrive. Now there are 3 + 2 = 5 cars. The answer is 5.\n\nQ: Leah had 32 chocolates and her sister had 42. If they ate 35, how many pieces do they have left in total?\nA: Leah had 32 chocolates and Leah's sister had 42. That means there were originally 32 + 42 = 74 chocolates. 35 have been eaten. So in total they still have 74 - 35 = 39 chocolates. The answer is 39.\n\nQ: Jason had 20 lollipops. He gave Denny some lollipops. Now Jason has 12 lollipops. How many lollipops did Jason give to Denny?\nA: Jason had 20 lollipops. Since he only has 12 now, he must have given the rest to Denny. The number of lollipops he has given to Denny must have been 20 - 12 = 8 lollipops. The answer is 8.\n\nQ: Shawn has five toys. For Christmas, he got two toys each from his mom and dad. How many toys does he have now?\nA: He has 5 toys. He got 2 from mom, so after that he has 5 + 2 = 7 toys. Then he got 2 more from dad, so in total he has 7 + 2 = 9 toys. The answer is 9.\n\nQ: There were nine computers in the server room. Five more computers were installed each day, from monday to thursday. How many computers are now in the server room?\nA: There are 4 days from monday to thursday. 5 computers were added each day. That means in total 4 * 5 = 20 computers were added. There were 9 computers in the beginning, so now there are 9 + 20 = 29 computers. The answer is 29.\n\nQ: Michael had 58 golf balls. On tuesday, he lost 23 golf balls. On wednesday, he lost 2 more. How many golf balls did he have at the end of wednesday?\nA: Michael initially had 58 balls. He lost 23 on Tuesday, so after that he has 58 - 23 = 35 balls. On Wednesday he lost 2 more so now he has 35 - 2 = 33 balls. The answer is 33.\n\nQ: Olivia has $23. She bought five bagels for $3 each. How much money does she have left?\nA: She bought 5 bagels for $3 each. This means she spent 5 * $3 = $15 on the bagels. She had $23 in beginning, so now she has $23 - $15 = $8. The answer is 8.\n\nQ: </Q>\nA: </A>",
     #                      {'question':'</Q>', 'answer':'</A>'},
     #                      ice_token='</E>')
-    #import pdb;pdb.set_trace()
+    # import pdb;pdb.set_trace()
     # prompt = open("llm_test/prompt_gsm8k_4shot.txt").readlines()
     # for _, line in enumerate(prompt):
-        # if line == "Let's think step by step\n":
-            # prompt[_] = "Let's think step by step\nAnswer:\n"
+    # if line == "Let's think step by step\n":
+    # prompt[_] = "Let's think step by step\nAnswer:\n"
     # prompt = ''.join(prompt)
     prompt = """
 Question: Angelo and Melanie want to plan how many hours over the next week they should study together for their test next week. They have 2 chapters of their textbook to study and 4 worksheets to memorize. They figure out that they should dedicate 3 hours to each chapter of their textbook and 1.5 hours for each worksheet. If they plan to study no more than 4 hours each day, how many days should they plan to study total over the next week if they take a 10-minute break every hour, include 3 10-minute snack breaks each day, and 30 minutes for lunch each day?
@@ -114,31 +125,39 @@ The answer is 146
 
     """
 
-    template = PromptTemplate(f"</E>{prompt}Question: </Q>\nLet's think step by step\n</A>",
-                              {'question':'</Q>', 'answer':'</A>'},
-                              ice_token='</E>')
+    template = PromptTemplate(
+        f"</E>{prompt}Question: </Q>\nLet's think step by step\n</A>",
+        {"question": "</Q>", "answer": "</A>"},
+        ice_token="</E>",
+    )
 
     retriever = ZeroRetriever(data)
     all_predictions = []
-    
+
     # generation_kwargs = dict(max_new_tokens=512, do_sample=True, temperature=0.7, top_k=40)
     generation_kwargs = dict(max_new_tokens=512)
-                    # {"max_gen_len": 512, "do_sample": True, "temperature": 0.8, "top_p": 0.8}
+    # {"max_gen_len": 512, "do_sample": True, "temperature": 0.8, "top_p": 0.8}
     for i in range(sc_size):
-        print("**"*50)
+        print("**" * 50)
         print("\t\t\tIteration:", str(i))
-        print("**"*50)
-        inferencer = GenInferencer(model_name=model, tokenizer_name=tokenizer, generation_kwargs=generation_kwargs, 
-                                batch_size=batch_size, output_json_filepath=model_path.split('/')[-2], output_json_filename="gsm8k_"+str(i))
+        print("**" * 50)
+        inferencer = GenInferencer(
+            model_name=model,
+            tokenizer_name=tokenizer,
+            generation_kwargs=generation_kwargs,
+            batch_size=batch_size,
+            output_json_filepath=model_path.split("/")[-2],
+            output_json_filename="gsm8k_" + str(i),
+        )
         predictions = inferencer.inference(retriever, ice_template=template)
         print(predictions[:2])
-        predictions = [processing_answer(pred.split('\n\n')[0]) for pred in predictions]
+        predictions = [processing_answer(pred.split("\n\n")[0]) for pred in predictions]
         # print("**"*50)
         # print("\t\t\tProcessed prediction at iteration:", str(i))
         # print("**"*50)
         # print(predictions[:2])
         all_predictions.append(predictions)
-    #import json
+    # import json
     # file = json.load(open("llm_llama/gsm8k.json"))
     # predictions = [file[str(i)]['prediction'] for i in range(len(file.keys()))]
     assert len(all_predictions) == sc_size
@@ -151,17 +170,15 @@ The answer is 146
         if i < 5:
             print(counter)
         final_prediction.append(counter.most_common(1)[0][0])
-    
-    #import pdb;pdb.set_trace()
-    print(final_prediction[:5], ref['answer'][:5])
-    score = AccEvaluator().score(predictions=final_prediction, references=ref['answer'])
+
+    # import pdb;pdb.set_trace()
+    print(final_prediction[:5], ref["answer"][:5])
+    score = AccEvaluator().score(predictions=final_prediction, references=ref["answer"])
     print(score)
 
 
 if __name__ == "__main__":
     # fire.Fire(main)
-    
+
     # replace with your model_path or huggingface model name here
-    main(model_path="decapoda-research/llama-7b-hf",
-    ice_num=4, batch_size=8, sc_size=1)
-    
+    main(model_path="decapoda-research/llama-7b-hf", ice_num=4, batch_size=8, sc_size=1)

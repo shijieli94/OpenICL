@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 from setuptools.command.install import install
 
 
@@ -6,7 +6,8 @@ class DownloadNLTK(install):
     def run(self):
         self.do_egg_install()
         import nltk
-        nltk.download('punkt')
+
+        nltk.download("punkt")
 
 
 REQUIRES = """
@@ -39,22 +40,17 @@ with open("README.md") as f:
 def do_setup():
     setup(
         name="openicl",
-        version='0.1.7',
+        version="0.1.7",
         description="An open source framework for in-context learning.",
         url="https://github.com/Shark-NLP/OpenICL",
-        author='Zhenyu Wu, Yaoxiang Wang, Zhiyong Wu, Jiacheng Ye',
+        author="Zhenyu Wu, Yaoxiang Wang, Zhiyong Wu, Jiacheng Ye",
         long_description=readme,
         long_description_content_type="text/markdown",
-        cmdclass={'download_nltk': DownloadNLTK},
+        cmdclass={"download_nltk": DownloadNLTK},
         install_requires=get_install_requires(),
-        setup_requires=['nltk==3.8'],
+        setup_requires=["nltk==3.8"],
         python_requires=">=3.8.0",
-        packages=find_packages(
-            exclude=[
-                "test*",
-                "paper_test*"
-            ]
-        ),
+        packages=find_packages(exclude=["test*", "paper_test*"]),
         keywords=["AI", "NLP", "in-context learning"],
         classifiers=[
             "Programming Language :: Python :: 3.8",
@@ -63,7 +59,7 @@ def do_setup():
             "Intended Audience :: Developers",
             "Intended Audience :: Education",
             "Intended Audience :: Science/Research",
-        ]
+        ],
     )
 
 

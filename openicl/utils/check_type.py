@@ -1,5 +1,6 @@
+from typing import Dict, List, Union
+
 from datasets import Dataset, DatasetDict
-from typing import List, Union, Dict
 
 
 def _check_type_list(obj, typelist: List):
@@ -10,7 +11,8 @@ def _check_type_list(obj, typelist: List):
         elif isinstance(obj, _type):
             return obj
     raise TypeError(
-        f"Expected an object in {[_.__name__ if _ is not None else None for _ in typelist]} type, but got {obj}")
+        f"Expected an object in {[_.__name__ if _ is not None else None for _ in typelist]} type, but got {obj}"
+    )
 
 
 def _check_dataset(obj) -> Union[Dataset, DatasetDict]:

@@ -1,10 +1,36 @@
+import collections
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Union
 
 import torch
-from transformers import PreTrainedTokenizerBase, BatchEncoding
+from transformers import BatchEncoding, PreTrainedTokenizerBase
 from transformers.file_utils import PaddingStrategy
-import numpy as np
+
+
+def apply_to_sample(f, sample):
+    if hasattr(sample, "__len__") and len(sample) == 0:
+        return {}
+
+    def _apply(x):
+        if torch.is_tensor(x):
+            return f(x)
+        elif isinstance(x, collections.OrderedDict):
+            # OrderedDict has attributes that needs to be preserved
+            od = collections.OrderedDict((key, _apply(value)) for key, value in x.items())
+            od.__dict__ = x.__dict__
+            return od
+        elif isinstance(x, dict):
+            return {key: _apply(value) for key, value in x.items()}
+        elif isinstance(x, list):
+            return [_apply(x) for x in x]
+        elif isinstance(x, tuple):
+            return tuple(_apply(x) for x in x)
+        elif isinstance(x, set):
+            return {_apply(x) for x in x}
+        else:
+            return x
+
+    return _apply(sample)
 
 
 class ListWrapper:
@@ -12,13 +38,16 @@ class ListWrapper:
         self.data = data
 
     def to(self, device):
-        return self.data
+        def _move_to_device(tensor):
+            return tensor.to(device=device, non_blocking=True)
+
+        return apply_to_sample(_move_to_device, self.data)
 
 
 def ignore_pad_dict(features):
     res_dict = {}
     if "metadata" in features[0]:
-        res_dict['metadata'] = ListWrapper([x.pop("metadata") for x in features])
+        res_dict["metadata"] = ListWrapper([x.pop("metadata") for x in features])
     return res_dict
 
 
@@ -43,7 +72,7 @@ class DataCollatorWithPaddingAndCuda:
                 pad_to_multiple_of=self.pad_to_multiple_of,
                 return_attention_mask=True,
                 return_tensors="pt",
-                verbose=False
+                verbose=False,
             )
 
         # print(features)
@@ -54,11 +83,12 @@ class DataCollatorWithPaddingAndCuda:
             pad_to_multiple_of=self.pad_to_multiple_of,
             return_attention_mask=True,
             return_tensors="pt",
-            verbose=False
+            verbose=False,
         )
 
         if has_labels:
-            batch['labels'] = labels.input_ids
+            batch["labels"] = labels.input_ids
+
         batch.update(res_dict)
 
         if self.device:

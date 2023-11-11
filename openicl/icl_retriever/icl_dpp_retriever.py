@@ -1,13 +1,16 @@
 """DPP Retriever"""
 
-from openicl import DatasetReader
-from openicl.icl_retriever.icl_topk_retriever import TopkRetriever
-from openicl.utils.logging import get_logger
-from typing import Optional
-import tqdm
-import numpy as np
 import math
+from typing import Optional
+
+import numpy as np
+import tqdm
 from accelerate import Accelerator
+
+from openicl import DatasetReader
+from openicl.utils.logging import get_logger
+
+from .icl_topk_retriever import TopkRetriever
 
 logger = get_logger(__name__)
 
@@ -17,7 +20,7 @@ class DPPRetriever(TopkRetriever):
         Class of DPP Retriever.
         Two-stage DPP is used, where first stage is to get results of TopK to reduce candidate sets
         chechout https://arxiv.org/abs/2302.05698 for details.
-        
+
     Attributes:
         dataset_reader (:obj:`DatasetReader`): An instance of the :obj:`DatasetReader` class.
         ice_separator (:obj:`str`, optional): A string that separates each in-context example.
@@ -29,34 +32,46 @@ class DPPRetriever(TopkRetriever):
         index_ds (:obj:`Dataset`): The index dataset. Used to select data for in-context examples.
         test_ds (:obj:`Dataset`): The test dataset. Used to generate prompts for each data.
         accelerator (:obj:`Accelerator`, optional): An instance of the :obj:`Accelerator` class, used for multiprocessing.
-        batch_size (:obj:`int`, optional): Batch size for the :obj:`DataLoader`. 
+        batch_size (:obj:`int`, optional): Batch size for the :obj:`DataLoader`.
         model (:obj:`SentenceTransformer`): An instance of :obj:`SentenceTransformer` class, used to calculate embeddings.
         tokenizer (:obj:`AutoTokenizer`): Tokenizer for :obj:`model`.
         index (:obj:`IndexIDMap`): Index generated with FAISS.
         seed (:obj:`int`, optional): Seed for the random number generator. (:obj:`random_state` in :obj:`sample_exact_k_dpp` method)
         scale_factor (:obj:`float`, optional): A factor when gets the kernel.
     """
+
     model = None
 
-    def __init__(self,
-                 dataset_reader: DatasetReader,
-                 ice_separator: Optional[str] = '\n',
-                 ice_eos_token: Optional[str] = '\n',
-                 prompt_eos_token: Optional[str] = '',
-                 sentence_transformers_model_name: Optional[str] = 'all-mpnet-base-v2',
-                 ice_num: Optional[int] = 1,
-                 candidate_num: Optional[int] = 1,
-                 index_split: Optional[str] = 'train',
-                 test_split: Optional[str] = 'test',
-                 tokenizer_name: Optional[str] = 'gpt2-xl',
-                 batch_size: Optional[int] = 1,
-                 accelerator: Optional[Accelerator] = None,
-                 seed: Optional[int] = 1,
-                 scale_factor: Optional[float] = 0.1
-                 ) -> None:
-        super().__init__(dataset_reader, ice_separator, ice_eos_token, prompt_eos_token,
-                         sentence_transformers_model_name, ice_num, index_split, test_split, tokenizer_name, batch_size,
-                         accelerator)
+    def __init__(
+        self,
+        dataset_reader: DatasetReader,
+        ice_separator: Optional[str] = "\n",
+        ice_eos_token: Optional[str] = "\n",
+        prompt_eos_token: Optional[str] = "",
+        sentence_transformers_model_name: Optional[str] = "all-mpnet-base-v2",
+        ice_num: Optional[int] = 1,
+        candidate_num: Optional[int] = 1,
+        index_split: Optional[str] = "train",
+        test_split: Optional[str] = "test",
+        tokenizer_name: Optional[str] = "gpt2-xl",
+        batch_size: Optional[int] = 1,
+        accelerator: Optional[Accelerator] = None,
+        seed: Optional[int] = 1,
+        scale_factor: Optional[float] = 0.1,
+    ) -> None:
+        super().__init__(
+            dataset_reader,
+            ice_separator,
+            ice_eos_token,
+            prompt_eos_token,
+            sentence_transformers_model_name,
+            ice_num,
+            index_split,
+            test_split,
+            tokenizer_name,
+            batch_size,
+            accelerator,
+        )
         self.candidate_num = candidate_num
         self.seed = seed
         self.scale_factor = scale_factor
@@ -66,10 +81,10 @@ class DPPRetriever(TopkRetriever):
         rtr_idx_list = [[] for _ in range(len(res_list))]
         logger.info("Retrieving data for test set...")
         for entry in tqdm.tqdm(res_list, disable=not self.is_main_process):
-            idx = entry['metadata']['id']
+            idx = entry["metadata"]["id"]
 
             # get TopK results
-            embed = np.expand_dims(entry['embed'], axis=0)
+            embed = np.expand_dims(entry["embed"], axis=0)
             near_ids = np.array(self.index.search(embed, self.candidate_num)[1][0].tolist())
 
             # DPP stage

@@ -10,14 +10,14 @@
   <a href="https://arxiv.org/abs/2303.02913">Paper</a> •
   <a href="https://github.com/Shark-NLP/OpenICL/tree/main/examples">Examples</a> •
   <a href="https://openicl.readthedocs.io/en/latest/index.html">Docs</a> •
-  <a href="#citation">Citation</a> 
+  <a href="#citation">Citation</a>
 </p>
 
 ![version](https://img.shields.io/badge/version-0.1.8-blue)
 
 
 ## Overview
-OpenICL provides an easy interface for in-context learning, with many state-of-the-art retrieval and inference methods built in to facilitate systematic comparison of LMs and fast research prototyping. Users can easily incorporate different retrieval and inference methods, as well as different prompt instructions into their workflow. 
+OpenICL provides an easy interface for in-context learning, with many state-of-the-art retrieval and inference methods built in to facilitate systematic comparison of LMs and fast research prototyping. Users can easily incorporate different retrieval and inference methods, as well as different prompt instructions into their workflow.
 <div align="center">
 <img src="https://s1.ax1x.com/2023/03/07/ppZWjmt.jpg"  border="0" />
 </div>
@@ -61,7 +61,7 @@ data = DatasetReader(dataset, input_columns=['text'], output_column='label')
 from openicl import PromptTemplate
 tp_dict = {
     0: "</E>Positive Movie Review: </text>",
-    1: "</E>Negative Movie Review: </text>" 
+    1: "</E>Negative Movie Review: </text>"
 }
 
 template = PromptTemplate(tp_dict, {'text': '</text>'}, ice_token='</E>')
@@ -75,9 +75,9 @@ from openicl import TopkRetriever
 # `ice_num` stands for the number of data in in-context examples.
 retriever = TopkRetriever(data, ice_num=8)
 ```
-Here we use the popular <a href="https://arxiv.org/abs/2101.06804">TopK</a> method to build the retriever. 
+Here we use the popular <a href="https://arxiv.org/abs/2101.06804">TopK</a> method to build the retriever.
 
-#### Step 4: Initialize the Inferencer 
+#### Step 4: Initialize the Inferencer
 ```python
 from openicl import PPLInferencer
 inferencer = PPLInferencer(model_name='distilgpt2')
